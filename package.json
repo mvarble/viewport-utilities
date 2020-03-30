@@ -1,0 +1,34 @@
+{
+  "name": "@mvarble/viewport-utilities",
+  "version": "1.0.0",
+  "description": "A bunch of utilities for interfacing with the viewport.js API",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mvarble/viewport-utilities.git"
+  },
+  "keywords": [
+    "viewport",
+    "canvas",
+    "xstream"
+  ],
+  "author": "Matthew Varble",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mvarble/viewport-utilities/issues"
+  },
+  "homepage": "https://github.com/mvarble/viewport-utilities#readme",
+  "devDependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.0",
+    "babel-loader": "^8.1.0",
+    "webpack": "^4.42.1",
+    "webpack-node-externals": "^1.7.2"
+  },
+  "dependencies": {
+    "xstream": "^11.11.0"
+  }
+}
