@@ -1,6 +1,6 @@
 {
   "name": "@mvarble/viewport-utilities",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A bunch of utilities for interfacing with the viewport.js API",
   "main": "index.js",
   "scripts": {
@@ -29,6 +29,7 @@
     "webpack-node-externals": "^1.7.2"
   },
   "dependencies": {
+    "@mvarble/frames.js": "^1.0.7",
     "xstream": "^11.11.0"
   }
 }

@@ -8,14 +8,17 @@
 // module dependencies: npm packages
 import xs from 'xstream';
 import fromEvent from 'xstream/extra/fromEvent';
+import { locsFrameTrans, identityFrame } from '@mvarble/frames.js';
 
 export {
   singleClick,
   createDrag,
+  renderBox,
 };
 export default {
   singleClick,
   createDrag,
+  renderBox,
 };
 
 /**
@@ -98,4 +101,24 @@ function createDrag(startStream$) {
       stop: () => {}
     });
   });
+}
+
+/**
+ * renderBox
+ *
+ * This is a function ((context, frame) => void) which renders a box 
+ * corresponding to the coordinates [-1, -1], [1, 1] in the frame.
+ */
+function renderBox(context, frame, options) {
+  const { fill, stroke } = options || {};
+  const locs = locsFrameTrans(
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]], 
+    frame,
+    identityFrame
+  );
+  context.beginPath();
+  context.moveTo(...locs[0]);
+  [1, 2, 3, 0].forEach(i => context.lineTo(...locs[i]));
+  if (fill) { context.fill(); }
+  if (stroke) { context.stroke(); }
 }
