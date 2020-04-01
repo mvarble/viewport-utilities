@@ -1,6 +1,6 @@
 {
   "name": "@mvarble/viewport-utilities",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "A bunch of utilities for interfacing with the viewport.js API",
   "main": "index.js",
   "scripts": {

@@ -4,6 +4,17 @@ A bunch of utilities for interfacing with the [viewport.js](https://github.com/m
 
 ## API
 
+### relativeMousePosition
+
+```js
+[x, y] = relativeMousePosition(event)
+```
+
+This function calculates the bounding rectangle of the `event` target and calculates the mouse position relative to this.
+If the `isDrag` attribute from [createDrag](#createdrag) is present in the event, `event.isDrag.target` is used instead of `event.target`.
+
+
+
 ### singleClick
 
 ```js

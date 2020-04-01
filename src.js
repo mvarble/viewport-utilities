@@ -19,6 +19,7 @@ import {
 } from '@mvarble/frames.js';
 
 export {
+  relativeMousePosition,
   singleClick,
   createDrag,
   renderBox,
@@ -29,6 +30,7 @@ export {
   parentDims,
 };
 export default {
+  relativeMousePosition,
   singleClick,
   createDrag,
   renderBox,
@@ -38,6 +40,23 @@ export default {
   changeZoom,
   parentDims,
 };
+
+/**
+ * relativeMousePosition:
+ *
+ * Function which returns the mouse position relative to the target of the click
+ * event; if the appendended event at the `isDrag` attribute is existent, we 
+ * use that target in the relative positioning
+ */
+function relativeMousePosition(event) {
+  const target = event.isDrag ? event.isDrag.target : event.target;
+  const rect = target.getBoundingClientRect();
+  return [
+    (event.clientX - rect.left) / (rect.right - rect.left) * target.width,
+    (event.clientY - rect.top) / (rect.bottom - rect.top) * target.height,
+  ];
+};
+
 
 /**
  * singleClick:
