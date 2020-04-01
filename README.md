@@ -119,7 +119,7 @@ This is a [xstream](https://github.com/staltz/xstream) operator that takes a str
 The initial dimensions are returned with the delivery of the element of the stream `element$`; thereafter, window `resize` events will pipe to this stream *only when the dimensions have changed*.
 To this end, you may think of this as a flattened stream of streams of the form
 
-```js
+```
 |---[initialWidth, initialHeight]----[newWidth, newHeight]--[newWidth, newHeight]--->
 ```
 
