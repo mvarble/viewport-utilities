@@ -8,21 +8,39 @@
 // module dependencies: npm packages
 import xs from 'xstream';
 import fromEvent from 'xstream/extra/fromEvent';
-import { locsFrameTrans, identityFrame } from '@mvarble/frames.js';
+import dropRepeats from 'xstream/extra/dropRepeats';
+import isolate from '@cycle/isolate';
+import {
+  locsFrameTrans,
+  identityFrame,
+  scaledFrame,
+  translatedFrame,
+  transformedByMatrix,
+} from '@mvarble/frames.js';
 
 export {
   singleClick,
   createDrag,
   renderBox,
+  withWindow,
+  putInWindow,
+  resizeFrame,
+  changeZoom,
+  parentDims,
 };
 export default {
   singleClick,
   createDrag,
   renderBox,
+  withWindow,
+  putInWindow,
+  resizeFrame,
+  changeZoom,
+  parentDims,
 };
 
 /**
- * singleClick
+ * singleClick:
  *
  * This is a xstream operator that takes a stream of 'mousedown' events
  * and returns a stream of 'click' events that happened within 250ms of the
@@ -45,7 +63,7 @@ function singleClick(mousedown$) {
 }
 
 /**
- * createDrag
+ * createDrag:
  *
  * This is a xstream operator that takes a stream of 'mousedown' events and 
  * returns a stream of streams that match the following diagram.
@@ -104,7 +122,7 @@ function createDrag(startStream$) {
 }
 
 /**
- * renderBox
+ * renderBox:
  *
  * This is a function ((context, frame) => void) which renders a box 
  * corresponding to the coordinates [-1, -1], [1, 1] in the frame.
@@ -121,4 +139,156 @@ function renderBox(context, frame, options) {
   [1, 2, 3, 0].forEach(i => context.lineTo(...locs[i]));
   if (fill) { context.fill(); }
   if (stroke) { context.stroke(); }
+}
+
+/**
+ * withWindow:
+ *
+ * a component wrapper that wraps the frame state and puts the state in a plane
+ * which resizes on canvas resize.
+ */
+function withWindow(PlaneFrame, options) {
+  // get the tags the user wants for state reducers and dimension changes
+  let { state, dimensions, frameSource } = (options || {});
+  if (!state) { state = 'state'; }
+  if (!dimensions) { dimensions = 'dimensions'; }
+  if (!frameSource) { frameSource = 'frameSource'; }
+
+  // wrap the component
+  function RootFrame(sources) {
+    // isolate the state into the second child of the root
+    const isolation = {
+      [state]: {
+        get: state => state.children[1],
+        set: (state, childState) => ({ 
+          ...state,
+          children: [state.children[0], childState],
+        }),
+      },
+      '*': null
+    };
+    const sink = isolate(PlaneFrame, isolation)(sources);
+
+    // add a reducer for window resizes
+    const resize$ = sources[dimensions]
+      .map(dims => (frame => resizeFrame(frame, ...dims)));
+
+    // add a reducer for panning
+    const pan$ = sources[frameSource].select(frame => !frame)
+      .events('mousedown')
+      .compose(createDrag)
+      .flatten()
+      .map(event => (frame => isolation[state].set(
+        frame,
+        translatedFrame(
+          frame.children[1], 
+          [event.movementX, event.movementY],
+          identityFrame,
+        )
+      )))
+
+    // add a reducer for zoom
+    const zoom$ = sources[frameSource].select(frame => !frame)
+      .events('wheel')
+      .map(event => (frame => isolation[state].set(
+        frame,
+        changeZoom(event, frame.children[1])
+      )));
+
+    return { 
+      ...sink,
+      [state]: xs.merge(sink[state], resize$, pan$, zoom$),
+    };
+  }
+
+  // return accordingly
+  return RootFrame;
+}
+
+
+/**
+ * putInWindow:
+ *
+ * a reducer that wraps a frame in the context of a canvas with specified 
+ * width and height
+ */
+function putInWindow(frame, width, height) {
+  return {
+    type: 'root',
+    width,
+    height,
+    children: [
+      { 
+        type: 'window',
+        worldMatrix: [
+          [width/2, 0,         width/2],
+          [0,       -height/2, height/2],
+          [0,       0,         1],
+        ],
+      },
+      frame,
+    ]
+  };
+}
+
+/**
+ * resizeFrame:
+ *
+ * This will take our state formed by `withWindow` and resize the frames to 
+ * match the dimensions
+ */
+function resizeFrame(frame, width, height) {
+  // get the old data
+  const oldWidth = frame.width || 1;
+  const oldHeight = frame.height || 1;
+
+  // get the relative scale
+  const scales = [width / oldWidth, height / oldHeight];
+  const logScales = scales.map(s => Math.abs(Math.log(s)));
+  const scale = scales[logScales.indexOf(Math.min(...logScales))];
+
+  // transform the frame according to the resize
+  const view = transformedByMatrix(
+    frame.children[1],
+    [
+      [scale, 0, (width - oldWidth)/2],
+      [0, scale, (height - oldHeight)/2],
+      [0, 0, 1]
+    ],
+    { worldMatrix: [[1, 0, oldWidth/2], [0, 1, oldHeight/2], [0, 0, 1]] }
+  );
+
+  // return the new frame
+  return putInWindow(view, width, height);
+}
+
+/**
+ * changeZoom:
+ *
+ * This will resize a frame according to a mouse wheel event
+ */
+function changeZoom(event, frame) {
+  // create a frame based on the event
+  const [x, y] = relativeMousePosition(event);
+  const mouseFrame = { worldMatrix: [[1, 0, x], [0, -1, y], [0, 0, 1]] };
+
+  // get the scale of the transformation from the event
+  const scale = Math.pow(1.1, -event.deltaY);
+
+  // return a scaled frame based off of the event
+  return scaledFrame(frame, [scale, scale], mouseFrame);
+}
+
+/**
+ * parentDims:
+ *
+ * This is an xstream operator that will take a stream of elements, and return
+ * a stream of [offsetWidth, offsetHeight] parent resizes.
+ */
+function parentDims(element$) {
+  const resizes$ = xs.merge(xs.of(undefined), fromEvent(window, 'resize'));
+  return xs.combine(element$, resizes$)
+    .filter(([el]) => el && el.parentNode)
+    .map(([el]) => [el.parentNode.offsetWidth, el.parentNode.offsetHeight])
+    .compose(dropRepeats(([a, b], [c, d]) => a === c && b === d));
 }
